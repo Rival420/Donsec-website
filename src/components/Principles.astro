@@ -1,0 +1,28 @@
+---
+import Icon from './Icon.astro';
+import { useTranslations, type Lang } from '../i18n/utils';
+interface Props { lang: Lang; expanded?: boolean }
+const { lang, expanded = false } = Astro.props;
+const t = useTranslations(lang);
+const items = [
+  { icon: 'lock', title: t('principles.1.title'), body: expanded ? t('about.principles.1') : t('principles.1.body') },
+  { icon: 'code', title: t('principles.2.title'), body: expanded ? t('about.principles.2') : t('principles.2.body') },
+  { icon: 'bolt', title: t('principles.3.title'), body: expanded ? t('about.principles.3') : t('principles.3.body') },
+  { icon: 'ai', title: t('principles.4.title'), body: expanded ? t('about.principles.4') : t('principles.4.body') },
+] as const;
+---
+<ul class:list={['principles grid', expanded ? 'grid--2' : 'grid--4']}>
+  {items.map((p) => (
+    <li class="principle">
+      <span class="icon-tile"><Icon name={p.icon} /></span>
+      <h3>{p.title}</h3>
+      <p>{p.body}</p>
+    </li>
+  ))}
+</ul>
+<style>
+  .principles { list-style: none; padding: 0; margin: 0; }
+  .principle { display: flex; flex-direction: column; gap: 0.6rem; }
+  .principle h3 { font-size: 1.08rem; margin: 0.4rem 0 0; }
+  .principle p { color: var(--text-2); font-size: 0.97rem; margin: 0; }
+</style>

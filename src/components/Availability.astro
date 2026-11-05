@@ -1,0 +1,15 @@
+---
+import { useTranslations, type Lang } from '../i18n/utils';
+interface Props { lang: Lang; text?: string }
+const { lang, text } = Astro.props;
+const t = useTranslations(lang);
+---
+<aside class="availability" aria-labelledby="availability-title">
+  <p class="eyebrow" id="availability-title">{t('availability.title')}</p>
+  <p class="availability__body">{text || t('availability.body')}</p>
+</aside>
+<style>
+  .availability { border: 1px solid var(--border); border-left: 4px solid var(--donit-blue); background: var(--surface); border-radius: var(--radius); padding: clamp(20px, 3vw, 28px) clamp(20px, 3vw, 32px); }
+  .availability .eyebrow { margin-bottom: 0.5rem; }
+  .availability__body { margin: 0; font-size: 1.05rem; color: var(--text); max-width: 70ch; text-wrap: pretty; }
+</style>

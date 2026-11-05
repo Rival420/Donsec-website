@@ -1,0 +1,79 @@
+---
+import '../styles/global.css';
+interface Props { title: string; who?: string }
+const { title, who } = Astro.props;
+const path = Astro.url.pathname;
+const nav = [
+  { href: '/admin', label: 'Overview' },
+  { href: '/admin/settings', label: 'Site texts' },
+];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} · donsec.be admin</title>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+  </head>
+  <body class="admin">
+    <header class="admin-bar">
+      <div class="container admin-bar__inner">
+        <a href="/admin" class="admin-bar__brand"><img src="/brand/symbol-white.svg" alt="" width="28" height="28" /> donsec.be <span>admin</span></a>
+        <nav aria-label="Admin"><ul>{nav.map((n) => <li><a href={n.href} aria-current={path === n.href ? 'page' : undefined}>{n.label}</a></li>)}<li><a href="/" rel="noopener">View site ↗</a></li></ul></nav>
+        <span class="admin-bar__who">{who}</span>
+      </div>
+    </header>
+    <main class="container admin-main">
+      <slot />
+    </main>
+  </body>
+</html>
+<style is:global>
+  body.admin { background: var(--donit-background); }
+  .admin-bar { background: var(--donit-navy); color: #fff; }
+  .admin-bar__inner { display: flex; align-items: center; gap: 24px; min-height: 56px; flex-wrap: wrap; }
+  .admin-bar__brand { display: inline-flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-weight: 700; }
+  .admin-bar__brand span { color: var(--donit-cyan); font-weight: 500; }
+  .admin-bar nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px; }
+  .admin-bar nav a { color: rgb(255 255 255 / 0.8); text-decoration: none; font-weight: 500; font-size: 0.95rem; }
+  .admin-bar nav a:hover, .admin-bar nav a[aria-current='page'] { color: #fff; }
+  .admin-bar__who { margin-left: auto; font-size: 0.85rem; color: rgb(255 255 255 / 0.6); }
+  .admin-main { padding-block: 32px 64px; }
+  .admin-main h1 { font-size: 1.8rem; margin-bottom: 0.25em; }
+  .admin-main h2 { font-size: 1.25rem; margin-top: 2rem; }
+  .admin-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .admin-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; font-size: 0.95rem; }
+  .admin-table th, .admin-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .admin-table th { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .admin-table tr:last-child td { border-bottom: 0; }
+  .admin-table .actions { white-space: nowrap; text-align: right; }
+  .admin-table .actions a { margin-left: 10px; font-weight: 600; text-decoration: none; }
+  .badge { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; background: var(--donit-light-blue); color: var(--blue-deep); margin-left: 6px; }
+  .badge--muted { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+  .admin-form { display: grid; gap: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: clamp(18px, 3vw, 28px); max-width: 900px; }
+  .admin-form .field textarea { min-height: 110px; font-family: inherit; }
+  .admin-form .field textarea.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem; min-height: 260px; }
+  .admin-form .field textarea.mono--short { min-height: 120px; }
+  .admin-form .field__spacer { display: block; height: 1.5em; }
+  .admin-main fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 12px; }
+  .admin-main legend { font-weight: 700; margin-bottom: 6px; }
+  .admin-head--sub { margin-top: 2rem; }
+  .admin-head--sub h2 { margin: 0; }
+  .admin-form .hint { font-size: 0.85rem; color: var(--muted); margin: 0; }
+  .admin-form .row { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+  .admin-form .check { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .admin-form .check input { width: 18px; height: 18px; }
+  .admin-form__actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .lang-tabs { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; background: var(--surface); }
+  .lang-tabs a { padding: 6px 14px; text-decoration: none; font-weight: 600; font-size: 0.9rem; color: var(--text-2); }
+  .lang-tabs a[aria-current='page'] { background: var(--donit-navy); color: #fff; }
+  .flash { padding: 12px 14px; border-radius: var(--radius-sm); margin-bottom: 18px; font-weight: 500; }
+  .flash--ok { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
+  .flash--err { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+  .danger { border: 1px solid #FECACA; background: #FFF7F7; border-radius: var(--radius); padding: 18px; max-width: 900px; margin-top: 28px; }
+  .danger h2 { margin-top: 0; color: #991B1B; }
+  .btn--danger { background: #B91C1C; color: #fff; }
+  .btn--danger:hover { background: #991B1B; color: #fff; }
+</style>

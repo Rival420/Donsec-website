@@ -1,0 +1,111 @@
+---
+import { getServices, getSettings, renderMarkdown } from '../lib/content';
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import PriceTable from '../components/PriceTable.astro';
+import Availability from '../components/Availability.astro';
+import Cta from '../components/Cta.astro';
+import { useTranslations, localePath, type Lang } from '../i18n/utils';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const [all, settings] = await Promise.all([getServices(lang), getSettings(lang)]);
+const rendered = all.map((p) => ({ p, html: renderMarkdown(p.body) }));
+const fmt = (n: number) => '€' + n.toLocaleString(lang === 'nl' ? 'nl-BE' : 'en-IE');
+const faq = all.filter((p) => !p.data.secondary).map((p) => ({
+  '@type': 'Service',
+  name: p.data.title,
+  description: p.data.summary,
+  provider: { '@id': 'https://donsec.be/#organization' },
+  areaServed: 'BE',
+  url: `https://donsec.be${localePath(lang, '/services')}#${p.data.anchor}`,
+}));
+---
+<Base lang={lang} title={t('services.title')} description={t('services.meta.description')} path="/services" jsonLd={[{ '@context': 'https://schema.org', '@graph': faq }]}>
+  <section class="page-hero">
+    <div class="container">
+      <p class="eyebrow">{t('services.title')}</p>
+      <h1>{t('services.h1')}</h1>
+      <p class="lead">{t('services.intro')}</p>
+    </div>
+  </section>
+
+  <div class="container services-layout">
+    <nav class="side-nav" aria-label={t('services.onThisPage')}>
+      <p class="side-nav__title">{t('services.onThisPage')}</p>
+      <ol>
+        {all.map((p, i) => <li><a href={`#${p.data.anchor}`}><span>{String(i + 1).padStart(2, '0')}</span>{p.data.title}</a></li>)}
+        <li><a href="#prices"><span>€</span>{t('price.table.title')}</a></li>
+      </ol>
+    </nav>
+
+    <div class="services-main">
+      {rendered.map(({ p, html }, i) => (
+        <article id={p.data.anchor} class:list={['service', { 'service--secondary': p.data.secondary }]}>
+          <header class="service__head">
+            <span class="icon-tile"><Icon name={p.data.icon} /></span>
+            <div>
+              <p class="eyebrow">{String(i + 1).padStart(2, '0')} / {t('services.title')}</p>
+              <h2>{p.data.title}</h2>
+              <p class="service__headline">{p.data.headline}</p>
+            </div>
+          </header>
+          <div class="service__body">
+            <div class="prose" set:html={html} />
+            <aside class="service__aside">
+              <h3 class="service__aside-title">{t('services.price')}</h3>
+              <ul class="service__prices">
+                {p.data.prices.map((r) => (
+                  <li>
+                    <span>{r.label}</span>
+                    <strong>{r.from ? `${t('price.from').replace('€', '')}${fmt(r.from)}` : r.text ?? ''}</strong>
+                  </li>
+                ))}
+              </ul>
+              <p class="price-note">{t('price.note')}</p>
+              <a class="btn btn--primary" href={localePath(lang, `/contact?topic=${p.data.ctaTopic ?? p.data.anchor}`)}>{p.data.cta}</a>
+            </aside>
+          </div>
+        </article>
+      ))}
+
+      <section id="prices" class="service">
+        <p class="eyebrow">{t('price.table.title')}</p>
+        <h2>{t('price.table.title')}</h2>
+        <PriceTable pillars={all} lang={lang} />
+      </section>
+
+      <Availability lang={lang} text={settings['availability.body']} />
+    </div>
+  </div>
+
+  <Cta lang={lang} />
+</Base>
+
+<style>
+  .services-layout { display: grid; grid-template-columns: 1fr; gap: 40px; padding-bottom: clamp(48px, 7vw, 96px); }
+  @media (min-width: 980px) { .services-layout { grid-template-columns: 240px 1fr; gap: 64px; } }
+  .side-nav { display: none; }
+  @media (min-width: 980px) { .side-nav { display: block; position: sticky; top: 96px; align-self: start; } }
+  .side-nav__title { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .side-nav ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--border); }
+  .side-nav a { display: flex; gap: 10px; padding: 8px 14px; color: var(--text-2); text-decoration: none; font-size: 0.92rem; line-height: 1.35; border-left: 2px solid transparent; margin-left: -1px; }
+  .side-nav a span { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.8rem; min-width: 1.6em; }
+  .side-nav a:hover { color: var(--text); border-left-color: var(--donit-blue); }
+  .services-main { display: flex; flex-direction: column; gap: clamp(48px, 7vw, 88px); min-width: 0; }
+  .service { scroll-margin-top: 96px; }
+  .service--secondary { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: clamp(20px, 3vw, 32px); }
+  .service__head { display: flex; gap: 18px; align-items: flex-start; margin-bottom: 24px; }
+  .service__head .eyebrow { margin-bottom: 0.4rem; }
+  .service__head h2 { margin-bottom: 0.2em; }
+  .service__headline { font-size: 1.15rem; color: var(--blue-deep); font-weight: 600; margin: 0; }
+  .service__body { display: grid; grid-template-columns: 1fr; gap: 28px; }
+  @media (min-width: 760px) { .service__body { grid-template-columns: 1.5fr 1fr; gap: 40px; } }
+  .service__aside { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; align-self: start; position: sticky; top: 96px; }
+  .service__aside-title { font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .service__prices { list-style: none; padding: 0; margin: 0 0 8px; display: flex; flex-direction: column; gap: 10px; }
+  .service__prices li { display: flex; justify-content: space-between; gap: 12px; font-size: 0.93rem; color: var(--text-2); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  .service__prices strong { color: var(--text); white-space: nowrap; }
+  .service__aside .btn { width: 100%; margin-top: 14px; }
+  .service__aside .price-note { font-size: 0.82rem; }
+</style>

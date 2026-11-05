@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="320" height="320" viewBox="0 0 320 320"><defs>
+ <linearGradient id="shield" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox"><stop offset="0" stop-color="#0062C6"/><stop offset=".55" stop-color="#0A84FF"/><stop offset="1" stop-color="#004EAE"/></linearGradient>
+ <linearGradient id="letter" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0B1C33"/><stop offset=".53" stop-color="#081F3B"/><stop offset="1" stop-color="#0A84FF"/></linearGradient>
+ <linearGradient id="appbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A84FF"/><stop offset="1" stop-color="#043D85"/></linearGradient>
+ </defs><path d="M160 25 C193 45 232 57 276 61 L276 157 C276 221 230 269 160 302 C90 269 44 221 44 157 L44 61 C88 57 127 45 160 25 Z M160 66 C193 84 223 91 239 94 L239 157 C239 204 209 238 160 261 C111 238 81 204 81 157 L81 94 C97 91 127 84 160 66 Z" fill="url(#shield)" fill-rule="evenodd"/>
+ <path d="M97 103 H158 C205 103 228 132 228 170 C228 209 200 237 157 237 H97 Z M135 139 V201 H157 C177 201 190 190 190 170 C190 150 177 139 157 139 Z" fill="url(#letter)" fill-rule="evenodd"/>
+ <path d="M153 157 V151 C153 139 159 133 167 133 C176 133 182 139 182 151 V157 H175 V151 C175 145 172 141 167 141 C162 141 160 145 160 151 V157 Z" fill="#0B1C33"/>
+ <rect x="150" y="156" width="34" height="36" rx="6" fill="#0B1C33"/>
+ <circle cx="167" cy="169" r="4.5" fill="#FFFFFF"/><path d="M164.7 172 L169.3 172 L171.5 183 H162.5 Z" fill="#FFFFFF"/></svg>

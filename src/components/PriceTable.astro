@@ -1,0 +1,24 @@
+---
+import type { Service } from '../lib/content';
+import { useTranslations, type Lang } from '../i18n/utils';
+interface Props { pillars: Service[]; lang: Lang }
+const { pillars, lang } = Astro.props;
+const t = useTranslations(lang);
+const fmt = (n: number) => '€' + n.toLocaleString(lang === 'nl' ? 'nl-BE' : 'en-IE');
+const rows = pillars.flatMap((p) => p.data.prices.filter((r) => r.from || r.text));
+---
+<div class="price-wrap">
+  <table class="price-table">
+    <caption class="visually-hidden">{t('price.table.title')}</caption>
+    <thead><tr><th scope="col">{t('price.table.offer')}</th><th scope="col">{t('price.table.from')}</th></tr></thead>
+    <tbody>
+      {rows.map((r) => (
+        <tr><td>{r.label}</td><td>{r.from ? fmt(r.from) : r.text}</td></tr>
+      ))}
+    </tbody>
+  </table>
+  <p class="price-note">{t('price.table.sub')} {t('price.note')}</p>
+</div>
+<style>
+  .price-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: clamp(12px, 2vw, 24px); overflow-x: auto; }
+</style>

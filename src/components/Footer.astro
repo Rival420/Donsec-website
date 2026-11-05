@@ -1,0 +1,49 @@
+---
+import { useTranslations, localePath, type Lang } from '../i18n/utils';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const year = new Date().getFullYear();
+---
+<footer class="site-footer">
+  <div class="container">
+    <div class="site-footer__top">
+      <div class="site-footer__brand">
+        <img src="/brand/logo-horizontal-white.svg" alt="Don IT & Security" width="200" height="60" />
+        <p class="site-footer__tagline">{t('site.tagline')}</p>
+      </div>
+      <nav aria-label="Footer">
+        <ul>
+          <li><a href={localePath(lang, '/services')}>{t('nav.services')}</a></li>
+          <li><a href={localePath(lang, '/work')}>{t('nav.work')}</a></li>
+          <li><a href={localePath(lang, '/about')}>{t('nav.about')}</a></li>
+          <li><a href={localePath(lang, '/contact')}>{t('nav.contact')}</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <ul>
+          <li><a href={localePath(lang, '/privacy')}>{t('legal.privacy')}</a></li>
+          <li><a href={localePath(lang, '/terms')}>{t('legal.terms')}</a></li>
+          <li><a href="mailto:pieter@donche.org">pieter@donche.org</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="site-footer__bottom">
+      <p>© {year} {t('site.legal')} · {t('footer.location')} · {t('footer.vat')}</p>
+      <p>{t('footer.noCookies')} {t('footer.builtOn')}</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer { background: var(--donit-navy); color: rgb(255 255 255 / 0.78); padding-block: clamp(40px, 5vw, 64px) 28px; font-size: 0.95rem; }
+  .site-footer__top { display: grid; gap: 32px; grid-template-columns: 1fr; margin-bottom: 36px; }
+  @media (min-width: 720px) { .site-footer__top { grid-template-columns: 2fr 1fr 1fr; } }
+  .site-footer__brand img { height: 40px; width: auto; margin-bottom: 14px; }
+  .site-footer__tagline { color: #fff; font-weight: 600; max-width: 32ch; margin: 0; letter-spacing: -0.01em; }
+  .site-footer ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .site-footer a { color: rgb(255 255 255 / 0.86); text-decoration: none; }
+  .site-footer a:hover { color: var(--donit-cyan); }
+  .site-footer__bottom { border-top: 1px solid rgb(255 255 255 / 0.14); padding-top: 20px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; font-size: 0.85rem; color: rgb(255 255 255 / 0.6); }
+  .site-footer__bottom p { margin: 0; }
+</style>

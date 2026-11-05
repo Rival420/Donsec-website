@@ -1,0 +1,44 @@
+---
+import Base from '../layouts/Base.astro';
+import ContactForm from '../components/ContactForm.astro';
+import Availability from '../components/Availability.astro';
+import Icon from '../components/Icon.astro';
+import { useTranslations, type Lang } from '../i18n/utils';
+import { getSettings } from '../lib/content';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const settings = await getSettings(lang);
+---
+<Base lang={lang} title={t('contact.title')} description={t('contact.meta.description')} path="/contact">
+  <section class="page-hero">
+    <div class="container">
+      <p class="eyebrow">{t('contact.title')}</p>
+      <h1>{t('contact.h1')}</h1>
+      <p class="lead">{settings['contact.intro'] || t('contact.intro')}</p>
+    </div>
+  </section>
+  <section class="section section--tight">
+    <div class="container contact-layout">
+      <div class="card contact-card"><ContactForm lang={lang} /></div>
+      <aside class="contact-side">
+        <div class="contact-direct">
+          <p class="eyebrow">{t('contact.direct')}</p>
+          <a class="contact-email" href="mailto:pieter@donche.org"><Icon name="mail" /> pieter@donche.org</a>
+          <p class="muted">Pieter Donche · {t('footer.location')}</p>
+        </div>
+        <Availability lang={lang} text={settings['availability.body']} />
+      </aside>
+    </div>
+  </section>
+</Base>
+<style>
+  .contact-layout { display: grid; grid-template-columns: 1fr; gap: 32px; }
+  @media (min-width: 980px) { .contact-layout { grid-template-columns: 1.5fr 1fr; gap: 48px; align-items: start; } }
+  .contact-card { padding: clamp(20px, 3vw, 36px); }
+  .contact-card:hover { border-color: var(--border); box-shadow: none; }
+  .contact-side { display: flex; flex-direction: column; gap: 24px; }
+  .contact-direct { padding: 4px 0; }
+  .contact-email { display: inline-flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: 600; text-decoration: none; margin-bottom: 8px; }
+  .contact-email :global(.icon) { width: 24px; height: 24px; }
+</style>

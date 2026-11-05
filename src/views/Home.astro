@@ -1,0 +1,152 @@
+---
+import { getServices, getWork, getSettings } from '../lib/content';
+import Base from '../layouts/Base.astro';
+import PillarCard from '../components/PillarCard.astro';
+import Principles from '../components/Principles.astro';
+import WorkCard from '../components/WorkCard.astro';
+import Availability from '../components/Availability.astro';
+import Icon from '../components/Icon.astro';
+import { useTranslations, localePath, type Lang } from '../i18n/utils';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const [pillars, proof, settings] = await Promise.all([getServices(lang, { includeSecondary: false }), getWork(lang, { featured: true }), getSettings(lang)]);
+const heroSub = settings['hero.sub'] || t('hero.sub');
+const steps = [1, 2, 3] as const;
+const why = ['home.why.1', 'home.why.2', 'home.why.3', 'home.why.4'] as const;
+---
+<Base lang={lang} title={t('site.tagline')} description={t('site.description')} path="/">
+  <section class="hero section--navy">
+    <div class="container hero__inner">
+      <h1 class="hero__title">
+        <span>{t('hero.line1')}</span>
+        <span class="hero__accent">{t('hero.line2')}</span>
+        <span>{t('hero.line3')}</span>
+      </h1>
+      <p class="lead hero__sub">{heroSub}</p>
+      <div class="hero__actions">
+        <a class="btn btn--primary" href={localePath(lang, '/contact')}>{t('cta.book')}</a>
+        <a class="btn btn--secondary" href={localePath(lang, '/work')}>{t('cta.work')}</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="services">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">01 / {t('home.pillars.label')}</p>
+        <h2>{t('home.pillars.title')}</h2>
+        <p class="lead">{t('hero.pitch')}</p>
+      </div>
+      <div class="grid grid--3">
+        {pillars.map((p, i) => <PillarCard pillar={p} lang={lang} index={i + 1} />)}
+      </div>
+      <p class="price-note">{t('price.note')}</p>
+    </div>
+  </section>
+
+  <section class="section section--white">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">02 / {t('home.principles.label')}</p>
+        <h2>{t('home.principles.title')}</h2>
+      </div>
+      <Principles lang={lang} />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="wp card">
+        <div class="wp__text">
+          <p class="eyebrow">{t('wp.label')}</p>
+          <h2>{t('wp.title')}</h2>
+          <p class="lead">{t('wp.body')}</p>
+        </div>
+        <div class="wp__side">
+          <span class="price"><strong>{t('wp.price')}</strong><small>{t('price.vat')}</small></span>
+          <a class="btn btn--primary" href={localePath(lang, '/contact?topic=apps')}>{t('wp.cta')}</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--light">
+    <div class="container">
+      <div class="section-head section-head--row">
+        <div>
+          <p class="eyebrow">03 / {t('home.proof.label')}</p>
+          <h2>{t('home.proof.title')}</h2>
+        </div>
+        <a class="btn btn--secondary" href={localePath(lang, '/work')}>{t('home.proof.more')} <Icon name="arrow" /></a>
+      </div>
+      <div class="grid grid--3">
+        {proof.map((w) => <WorkCard item={w} lang={lang} compact />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container why">
+      <div class="why__text">
+        <p class="eyebrow">04 / {t('home.why.label')}</p>
+        <h2>{t('home.why.title')}</h2>
+        <p class="lead">{t('home.why.body')}</p>
+      </div>
+      <ul class="why__list">
+        {why.map((k) => <li><Icon name="check" /><span>{t(k)}</span></li>)}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section--white">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">05 / {t('home.how.label')}</p>
+        <h2>{t('home.how.title')}</h2>
+      </div>
+      <ol class="steps grid grid--3">
+        {steps.map((n) => (
+          <li class="step">
+            <span class="step__num">0{n}</span>
+            <h3>{t(`home.how.${n}.title`)}</h3>
+            <p>{t(`home.how.${n}.body`)}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="section section--tight">
+    <div class="container"><Availability lang={lang} text={settings['availability.body']} /></div>
+  </section>
+</Base>
+
+<style>
+  .hero { position: relative; overflow: hidden; padding-block: clamp(72px, 11vw, 150px) clamp(64px, 9vw, 120px); }
+  .hero::before { content: ''; position: absolute; inset: 0; background-image: url('/brand/pattern-tile.svg'); background-size: 210px; opacity: 0.55; mask-image: linear-gradient(to right, transparent 30%, black 100%); -webkit-mask-image: linear-gradient(to right, transparent 30%, black 100%); }
+  /* Diagonal brand band from the brand book cover */
+  .hero::after { content: ''; position: absolute; top: -20%; bottom: -20%; right: 12%; width: 22%; background: var(--donit-gradient); opacity: 0.35; transform: skewX(-18deg); pointer-events: none; }
+  .hero__inner { position: relative; z-index: 1; max-width: 820px; }
+  .hero__title { display: flex; flex-direction: column; gap: 0.05em; font-size: clamp(2.5rem, 7vw, 4.8rem); letter-spacing: -0.03em; margin-bottom: 0.45em; }
+  .hero__accent { color: var(--donit-cyan); }
+  .hero__sub { max-width: 56ch; margin-bottom: 2rem; font-size: clamp(1.1rem, 1.8vw, 1.35rem); }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .section-head--row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; max-width: none; }
+  .section-head--row h2 { margin-bottom: 0; }
+  .wp { display: grid; gap: 28px; grid-template-columns: 1fr; padding: clamp(24px, 4vw, 48px); border-left: 4px solid var(--donit-blue); }
+  .wp:hover { border-color: var(--border); border-left-color: var(--donit-blue); box-shadow: none; }
+  @media (min-width: 860px) { .wp { grid-template-columns: 1fr auto; align-items: center; } }
+  .wp h2 { font-size: clamp(1.5rem, 2.8vw, 2.1rem); max-width: 26ch; }
+  .wp__side { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+  .why { display: grid; gap: 32px 64px; grid-template-columns: 1fr; align-items: center; }
+  @media (min-width: 860px) { .why { grid-template-columns: 1.2fr 1fr; } }
+  .why__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+  .why__list li { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-weight: 500; }
+  .why__list :global(.icon) { width: 22px; height: 22px; color: var(--blue-deep); margin-top: 2px; }
+  .steps { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+  .step { position: relative; padding-top: 8px; }
+  .step__num { display: block; font-size: 2.4rem; font-weight: 700; letter-spacing: -0.04em; color: var(--donit-blue); line-height: 1; margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+  .step h3 { font-size: 1.15rem; }
+  .step p { color: var(--text-2); margin: 0; }
+</style>

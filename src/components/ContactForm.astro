@@ -1,0 +1,67 @@
+---
+import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
+import { getServices } from '../lib/content';
+import { useTranslations, type Lang } from '../i18n/utils';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const pillars = await getServices(lang, { includeSecondary: false });
+const topics = [...pillars.map((p) => ({ value: p.data.anchor, label: p.data.title })), { value: 'other', label: lang === 'nl' ? 'Iets anders' : 'Something else' }];
+const msgs = {
+  ok: t('contact.form.success'), err: t('contact.form.error'), ratelimited: t('contact.form.ratelimited'), turnstile: t('contact.form.turnstile'), sending: t('contact.form.sending'), submit: t('contact.form.submit'),
+};
+---
+<form class="contact-form" method="post" action="/api/contact" data-contact-form data-messages={JSON.stringify(msgs)} novalidate>
+  <input type="hidden" name="lang" value={lang} />
+  <!-- Honeypot: hidden from humans, bots fill it. -->
+  <div class="hp" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" /></label></div>
+  <div class="form-row">
+    <div class="field">
+      <label for="cf-name">{t('contact.form.name')} <small>({t('contact.form.required')})</small></label>
+      <input id="cf-name" name="name" type="text" required autocomplete="name" maxlength="120" />
+    </div>
+    <div class="field">
+      <label for="cf-company">{t('contact.form.company')}</label>
+      <input id="cf-company" name="company" type="text" autocomplete="organization" maxlength="120" />
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="field">
+      <label for="cf-email">{t('contact.form.email')} <small>({t('contact.form.required')})</small></label>
+      <input id="cf-email" name="email" type="email" required autocomplete="email" maxlength="200" />
+    </div>
+    <div class="field">
+      <label for="cf-topic">{t('contact.form.pillar')}</label>
+      <select id="cf-topic" name="topic" data-topic>
+        <option value="">{t('contact.form.pillar.placeholder')}</option>
+        {topics.map((o) => <option value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  </div>
+  <div class="field">
+    <label for="cf-message">{t('contact.form.message')} <small>({t('contact.form.required')})</small></label>
+    <textarea id="cf-message" name="message" required maxlength="5000" placeholder={t('contact.form.message.placeholder')}></textarea>
+  </div>
+  <div class="cf-turnstile" data-sitekey={PUBLIC_TURNSTILE_SITE_KEY} data-theme="light" data-language={lang} data-size="flexible"></div>
+  <div class="contact-form__actions">
+    <button class="btn btn--primary" type="submit" data-submit>{t('contact.form.submit')}</button>
+    <p class="contact-form__privacy">{t('contact.form.privacy')}</p>
+  </div>
+  <p class="form-status" role="status" aria-live="polite" data-status hidden></p>
+  <!-- No-JS fallback: the API redirects to #sent / #error / #ratelimited / #turnstile -->
+  <p class="form-status form-status--target" id="sent" data-kind="ok">{msgs.ok}</p>
+  <p class="form-status form-status--target" id="error" data-kind="err">{msgs.err}</p>
+  <p class="form-status form-status--target" id="ratelimited" data-kind="err">{msgs.ratelimited}</p>
+  <p class="form-status form-status--target" id="turnstile" data-kind="err">{msgs.turnstile}</p>
+</form>
+<script src="../scripts/contact.ts"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer is:inline></script>
+<style>
+  .contact-form { display: flex; flex-direction: column; gap: 18px; }
+  .hp { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+  .contact-form__actions { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; }
+  .contact-form__privacy { margin: 0; font-size: 0.88rem; color: var(--muted); max-width: 44ch; }
+  .cf-turnstile { min-height: 65px; }
+  .form-status--target { display: none; }
+  .form-status--target:target { display: block; }
+</style>

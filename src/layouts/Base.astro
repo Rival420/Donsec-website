@@ -1,0 +1,97 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { useTranslations, localePath, stripLocale, type Lang } from '../i18n/utils';
+
+interface Props {
+  lang: Lang;
+  title: string;
+  description: string;
+  /** EN path without locale prefix, e.g. "/services". Used for hreflang + canonical. */
+  path: string;
+  ogImage?: string;
+  jsonLd?: Record<string, unknown>[];
+}
+const { lang, title, description, path, ogImage = '/og-image.png', jsonLd = [] } = Astro.props;
+const t = useTranslations(lang);
+const site = Astro.site ?? new URL('https://donsec.be');
+const canonical = new URL(localePath(lang, path), site).href;
+const enUrl = new URL(localePath('en', path), site).href;
+const nlUrl = new URL(localePath('nl', path), site).href;
+const fullTitle = path === '/' ? `${t('site.legal')} — ${t('site.tagline')}` : `${title} · ${t('site.name')}`;
+
+const org = {
+  '@context': 'https://schema.org',
+  '@type': 'ProfessionalService',
+  '@id': `${site.href}#organization`,
+  name: 'DonIT&Security',
+  alternateName: 'DonIT',
+  url: site.href,
+  logo: new URL('/brand/symbol-color.svg', site).href,
+  image: new URL('/og-image.png', site).href,
+  email: 'pieter@donche.org',
+  vatID: 'BE1021284326',
+  slogan: 'Built to work. Tested to break. Hosted to last.',
+  description: t('site.description'),
+  address: { '@type': 'PostalAddress', addressLocality: 'Eppegem', addressRegion: 'Vlaams-Brabant', addressCountry: 'BE' },
+  areaServed: { '@type': 'Country', name: 'Belgium' },
+  founder: { '@id': `${site.href}#person` },
+  knowsLanguage: ['en', 'nl'],
+  priceRange: '€750+',
+};
+const person = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  '@id': `${site.href}#person`,
+  name: 'Pieter Donche',
+  jobTitle: 'Engineer, penetration tester, operator',
+  worksFor: { '@id': `${site.href}#organization` },
+  email: 'pieter@donche.org',
+  address: { '@type': 'PostalAddress', addressLocality: 'Eppegem', addressCountry: 'BE' },
+  url: new URL(localePath(lang, '/about'), site).href,
+};
+const ld = JSON.stringify([org, person, ...jsonLd]);
+---
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="en" href={enUrl} />
+    <link rel="alternate" hreflang="nl" href={nlUrl} />
+    <link rel="alternate" hreflang="x-default" href={enUrl} />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#0A84FF" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="preload" href="/fonts/inter-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DonIT&Security" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL(ogImage, site).href} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content={lang === 'nl' ? 'nl_BE' : 'en_BE'} />
+    <meta property="og:locale:alternate" content={lang === 'nl' ? 'en_BE' : 'nl_BE'} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json" set:html={ld} />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">{t('nav.skip')}</a>
+    <Header lang={lang} path={stripLocale(Astro.url.pathname)} />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer lang={lang} />
+  </body>
+</html>

@@ -1,0 +1,97 @@
+---
+export const prerender = false;
+import { env } from 'cloudflare:workers';
+import Admin from '../../../layouts/Admin.astro';
+import { getWorkItem, PILLARS } from '../../../lib/content';
+import { str, int, bool, lang as toLang, parseTags, slugOk, audit, redirect } from '../../../lib/admin/forms';
+
+const isNew = Astro.params.slug === 'new';
+const lang = toLang(Astro.url.searchParams.get('lang'));
+let error: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const action = str(f, '_action', 20) || 'save';
+  const slug = isNew ? str(f, 'slug', 50).toLowerCase() : Astro.params.slug!;
+  if (action === 'delete') {
+    if (!bool(f, 'confirm')) error = 'Tick the confirmation box to delete.';
+    else {
+      const scope = str(f, 'scope', 10) === 'all' ? 'all' : lang;
+      if (scope === 'all') await env.DB.prepare('DELETE FROM work WHERE slug = ?').bind(slug).run();
+      else await env.DB.prepare('DELETE FROM work WHERE slug = ? AND lang = ?').bind(slug, lang).run();
+      await audit(Astro.locals.adminEmail ?? '?', `work.delete.${scope}`, `${lang}/${slug}`);
+      return redirect('/admin?ok=1');
+    }
+  } else {
+    const name = str(f, 'name', 160);
+    let url: string | null = str(f, 'url', 300) || null;
+    if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+    if (!slugOk(slug)) error = 'Slug must be lowercase letters, digits and dashes.';
+    else if (!name) error = 'Name is required.';
+    else if (url && !URL.canParse(url)) error = 'Link is not a valid URL.';
+    else {
+      const pillar = PILLARS.includes(str(f, 'pillar') as never) ? str(f, 'pillar') : 'apps';
+      await env.DB.prepare(
+        `INSERT INTO work (slug, lang, sort, name, summary, tags, url, pillar, nda, featured, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, datetime('now'))
+         ON CONFLICT(slug, lang) DO UPDATE SET sort=?3, name=?4, summary=?5, tags=?6, url=?7, pillar=?8, nda=?9, featured=?10, updated_at=datetime('now')`,
+      ).bind(slug, lang, int(f, 'sort'), name, str(f, 'summary', 400), JSON.stringify(parseTags(str(f, 'tags', 500))), url, pillar, bool(f, 'nda') ? 1 : 0, bool(f, 'featured') ? 1 : 0).run();
+      await audit(Astro.locals.adminEmail ?? '?', 'work.save', `${lang}/${slug}`);
+      return redirect(`/admin/work/${slug}?lang=${lang}&ok=1`);
+    }
+  }
+}
+
+const slug = isNew ? '' : Astro.params.slug!;
+const w = isNew ? null : await getWorkItem(lang, slug);
+const other = isNew ? null : await getWorkItem(lang === 'en' ? 'nl' : 'en', slug);
+const d = w?.data;
+const ok = Astro.url.searchParams.get('ok');
+---
+<Admin title={isNew ? 'New project' : `Work: ${slug}`} who={Astro.locals.adminEmail}>
+  <p><a href="/admin">← Overview</a></p>
+  <div class="admin-head">
+    <h1>{isNew ? 'New project' : d?.name ?? other?.data.name ?? slug}</h1>
+    <div class="lang-tabs"><a href={`?lang=en`} aria-current={lang === 'en' ? 'page' : undefined}>EN</a><a href={`?lang=nl`} aria-current={lang === 'nl' ? 'page' : undefined}>NL</a></div>
+  </div>
+  {ok && <p class="flash flash--ok">Saved. <a href={`/${lang === 'nl' ? 'nl/' : ''}work`} rel="noopener">View on site ↗</a></p>}
+  {error && <p class="flash flash--err">{error}</p>}
+  {!isNew && !w && <p class="flash flash--err">No {lang.toUpperCase()} version yet — saving creates it{other ? ' (fields prefilled from the other language)' : ''}.</p>}
+  {isNew && <p class="muted">Creates the {lang.toUpperCase()} version. Switch the tab above to create the other language afterwards; fields are prefilled.</p>}
+
+  <form method="post" class="admin-form">
+    <input type="hidden" name="_action" value="save" />
+    <div class="row">
+      {isNew && <div class="field"><label for="slug">Slug <small>(lowercase, dashes)</small></label><input id="slug" name="slug" required pattern="[a-z0-9][a-z0-9-]*" maxlength="50" /></div>}
+      <div class="field"><label for="name">Name</label><input id="name" name="name" required maxlength="160" value={d?.name ?? other?.data.name ?? ''} /></div>
+    </div>
+    <div class="field"><label for="summary">One-liner</label><textarea id="summary" name="summary" maxlength="400">{d?.summary ?? other?.data.summary ?? ''}</textarea></div>
+    <div class="row">
+      <div class="field"><label for="url">Link <small>(optional)</small></label><input id="url" name="url" type="url" maxlength="300" placeholder="https://" value={d?.url ?? other?.data.url ?? ''} /></div>
+      <div class="field"><label for="pillar">Pillar</label><select id="pillar" name="pillar">{PILLARS.map((p) => <option value={p} selected={(d?.pillar ?? other?.data.pillar) === p}>{p}</option>)}</select></div>
+      <div class="field"><label for="sort">Order</label><input id="sort" name="sort" type="number" min="0" max="99" value={d?.order ?? other?.data.order ?? 50} /></div>
+    </div>
+    <div class="field"><label for="tags">Tech tags <small>(comma-separated)</small></label><input id="tags" name="tags" maxlength="500" value={(d?.tags ?? other?.data.tags ?? []).join(', ')} /></div>
+    <div class="row">
+      <label class="check"><input type="checkbox" name="featured" checked={d?.featured ?? other?.data.featured} /> Show on home (proof strip)</label>
+      <label class="check"><input type="checkbox" name="nda" checked={d?.nda ?? other?.data.nda} /> Under NDA badge</label>
+    </div>
+    <div class="admin-form__actions">
+      <button class="btn btn--primary" type="submit">{isNew ? `Create (${lang.toUpperCase()})` : `Save ${lang.toUpperCase()}`}</button>
+      <a class="btn btn--secondary btn--sm" href="/admin">Cancel</a>
+      {d && <span class="muted">Last saved {d.updatedAt} UTC</span>}
+    </div>
+  </form>
+
+  {!isNew && w && (
+    <form method="post" class="danger">
+      <h2>Delete</h2>
+      <input type="hidden" name="_action" value="delete" />
+      <div class="admin-form__actions">
+        <label class="check"><input type="checkbox" name="confirm" /> I'm sure</label>
+        <select name="scope"><option value="one">Only {lang.toUpperCase()}</option><option value="all">Both languages</option></select>
+        <button class="btn btn--danger btn--sm" type="submit">Delete project</button>
+      </div>
+    </form>
+  )}
+</Admin>

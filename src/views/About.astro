@@ -1,0 +1,83 @@
+---
+import Base from '../layouts/Base.astro';
+import Principles from '../components/Principles.astro';
+import Cta from '../components/Cta.astro';
+import { useTranslations, type Lang } from '../i18n/utils';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const stack = [
+  'Cloudflare (Workers, Zero Trust, Access, Gateway)', 'Okta / Entra ID', 'SentinelOne-class EDR', 'SIEM',
+  'Docker', 'Postgres', 'Go', 'Python', 'TypeScript', 'React', 'Claude / LLM tooling', 'MCP',
+];
+---
+<Base lang={lang} title={t('about.title')} description={t('about.meta.description')} path="/about">
+  <section class="page-hero">
+    <div class="container about-hero">
+      <div class="about-hero__text">
+        <p class="eyebrow">{t('about.title')}</p>
+        <h1>{t('about.name')}</h1>
+        <p class="about-hero__role">{t('about.role')}</p>
+        <p class="lead">{t('about.bio.1')}</p>
+        <p class="muted">{t('about.bio.2')}</p>
+      </div>
+      <div class="about-hero__mark" aria-hidden="true">
+        <img src="/brand/symbol-color.svg" alt="" width="320" height="320" />
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--white">
+    <div class="container about-two">
+      <div>
+        <p class="eyebrow">{t('about.why.title')}</p>
+        <h2>{t('about.why.title')}</h2>
+        <p class="lead">{t('about.why.body')}</p>
+      </div>
+      <div>
+        <p class="eyebrow">{t('about.security.title')}</p>
+        <h2>{t('about.security.title')}</h2>
+        <p class="lead">{t('about.security.body')}</p>
+        <p class="about-links"><a href="https://securityheaders.com/?q=donsec.be&followRedirects=on" rel="noopener">securityheaders.com</a> · <a href="https://developer.mozilla.org/en-US/observatory/analyze?host=donsec.be" rel="noopener">Mozilla Observatory</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">{t('about.principles.title')}</p>
+        <h2>{t('home.principles.title')}</h2>
+      </div>
+      <Principles lang={lang} expanded />
+    </div>
+  </section>
+
+  <section class="section section--light">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Stack</p>
+        <h2>{t('about.stack.title')}</h2>
+      </div>
+      <ul class="stack">
+        {stack.map((s) => <li>{s}</li>)}
+      </ul>
+    </div>
+  </section>
+
+  <Cta lang={lang} />
+</Base>
+
+<style>
+  .about-hero { display: grid; grid-template-columns: 1fr; gap: 32px; align-items: center; }
+  @media (min-width: 860px) { .about-hero { grid-template-columns: 1.6fr 1fr; } }
+  .about-hero__role { font-weight: 600; color: var(--blue-deep); margin-top: -0.4rem; margin-bottom: 1rem; }
+  .about-hero__mark { display: none; }
+  @media (min-width: 860px) { .about-hero__mark { display: grid; place-items: center; } .about-hero__mark img { width: min(100%, 280px); height: auto; opacity: 0.95; } }
+  .about-two { display: grid; grid-template-columns: 1fr; gap: 40px; }
+  @media (min-width: 860px) { .about-two { grid-template-columns: 1fr 1fr; gap: 64px; } }
+  .about-two h2 { font-size: clamp(1.4rem, 2.4vw, 1.8rem); }
+  .about-links { margin-top: 1rem; font-weight: 500; }
+  .stack { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+  .stack li { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 8px 16px; font-weight: 500; font-size: 0.95rem; }
+</style>

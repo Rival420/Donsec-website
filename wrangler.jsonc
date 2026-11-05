@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "donsec-website",
+  "account_id": "d4334c5d01c0fdd8f4d550c32a60c1d8",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-10-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "upload_source_maps": true,
+  "workers_dev": true,
+  "preview_urls": true,
+  "routes": [
+    { "pattern": "donsec.be", "custom_domain": true },
+    { "pattern": "www.donsec.be", "custom_domain": true }
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash",
+    // Dynamic (D1-rendered) routes must reach the Worker even for browser navigations;
+    // without this, navigation requests get the static 404 page before the Worker runs.
+    "run_worker_first": ["/", "/nl", "/services", "/nl/services", "/work", "/nl/work", "/contact", "/nl/contact", "/admin", "/admin/*", "/api/*"]
+  },
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "donsec-website", "database_id": "9b96f835-ff13-49d7-9b9f-5c49115684cf", "migrations_dir": "migrations" }
+  ],
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "donsec.cloudflareaccess.com",
+    "ACCESS_AUD": "09030b54eccaf52e533a1e1cd7a9a8b0415c4406fd0044e66e9cde86403ca0f5",
+    "CONTACT_TO": "pieter@donche.org",
+    "CONTACT_FROM": "website@donsec.be",
+    "SITE_ORIGIN": "https://donsec.be"
+  },
+  // Cloudflare Email Service — native transactional mail, no third-party provider.
+  // Requires: npx wrangler email sending enable donsec.be
+  "send_email": [{ "name": "EMAIL" }],
+  // Native Workers rate limiting: 5 contact-form posts per IP per minute.
+  "ratelimits": [
+    { "name": "CONTACT_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 5, "period": 60 } }
+  ]
+}

@@ -1,0 +1,23 @@
+---
+import { getEntry, render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import { type Lang } from '../i18n/utils';
+interface Props { lang: Lang; slug: 'privacy' | 'terms' }
+const { lang, slug } = Astro.props;
+const entry = await getEntry('legal', `${lang}/${slug}`);
+if (!entry) throw new Error(`Missing legal entry ${lang}/${slug}`);
+const { Content } = await render(entry);
+const updated = entry.data.updated.toLocaleDateString(lang === 'nl' ? 'nl-BE' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+<Base lang={lang} title={entry.data.title} description={entry.data.description} path={`/${slug}`}>
+  <section class="page-hero">
+    <div class="container">
+      <h1>{entry.data.title}</h1>
+      <p class="lead">{entry.data.description}</p>
+      <p class="muted">{lang === 'nl' ? 'Laatst bijgewerkt' : 'Last updated'}: {updated}</p>
+    </div>
+  </section>
+  <section class="section section--tight">
+    <div class="container prose"><Content /></div>
+  </section>
+</Base>

@@ -1,0 +1,66 @@
+---
+import { useTranslations, localePath, otherLang, type Lang } from '../i18n/utils';
+interface Props { lang: Lang; path: string }
+const { lang, path } = Astro.props;
+const t = useTranslations(lang);
+const nav = [
+  { href: '/services', label: t('nav.services') },
+  { href: '/work', label: t('nav.work') },
+  { href: '/about', label: t('nav.about') },
+  { href: '/contact', label: t('nav.contact') },
+];
+const other = otherLang(lang);
+const isActive = (href: string) => path === href || path.startsWith(href + '/');
+---
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a href={localePath(lang, '/')} class="brand" aria-label="DonIT&Security — home">
+      <img src="/brand/logo-horizontal-color.svg" alt="Don IT & Security" width="200" height="60" />
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
+      <span class="nav-toggle__open">{t('nav.menu')}</span>
+      <span class="nav-toggle__close">{t('nav.close')}</span>
+    </button>
+    <nav id="site-nav" class="site-nav" aria-label="Primary">
+      <ul>
+        {nav.map((n) => (
+          <li><a href={localePath(lang, n.href)} aria-current={isActive(n.href) ? 'page' : undefined}>{n.label}</a></li>
+        ))}
+        <li class="site-nav__lang">
+          <a href={localePath(other, path)} hreflang={other} lang={other} aria-label={t('nav.lang.label')} rel="alternate">
+            <span aria-hidden="true">{lang.toUpperCase()}</span><span class="site-nav__lang-sep" aria-hidden="true">|</span><span>{other.toUpperCase()}</span>
+          </a>
+        </li>
+        <li class="site-nav__cta"><a class="btn btn--primary btn--sm" href={localePath(lang, '/contact')}>{t('cta.book')}</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<script src="../scripts/nav.ts"></script>
+
+<style>
+  .site-header { position: sticky; top: 0; z-index: 50; background: rgb(248 250 252 / 0.88); backdrop-filter: saturate(160%) blur(10px); border-bottom: 1px solid var(--border); }
+  .site-header__inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 72px; }
+  .brand img { height: 44px; width: auto; }
+  .site-nav ul { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: clamp(14px, 2vw, 28px); }
+  .site-nav a:not(.btn) { color: var(--text); text-decoration: none; font-weight: 500; font-size: 0.98rem; padding: 6px 0; border-bottom: 2px solid transparent; }
+  .site-nav a:not(.btn):hover { color: var(--blue-deep); }
+  .site-nav a[aria-current='page'] { border-bottom-color: var(--donit-blue); }
+  .site-nav__lang a { display: inline-flex; gap: 6px; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; font-size: 0.9rem !important; }
+  .site-nav__lang a > span:first-child { color: var(--muted); }
+  .site-nav__lang-sep { color: var(--border-strong); }
+  .nav-toggle { display: none; font: inherit; font-weight: 600; background: none; border: 1.5px solid var(--border-strong); border-radius: 999px; padding: 8px 14px; color: var(--text); cursor: pointer; }
+  .nav-toggle__close { display: none; }
+  .nav-toggle[aria-expanded='true'] .nav-toggle__open { display: none; }
+  .nav-toggle[aria-expanded='true'] .nav-toggle__close { display: inline; }
+  @media (max-width: 860px) {
+    .nav-toggle { display: inline-block; }
+    .site-nav { display: none; position: absolute; left: 0; right: 0; top: 100%; background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); }
+    .site-nav.is-open { display: block; }
+    .site-nav ul { flex-direction: column; align-items: stretch; gap: 0; padding: 8px var(--gutter) 16px; }
+    .site-nav li a:not(.btn) { display: block; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 1.05rem; }
+    .site-nav a[aria-current='page'] { border-bottom-color: var(--border); color: var(--blue-deep); }
+    .site-nav__cta { padding-top: 14px; }
+    .site-nav__cta .btn { width: 100%; }
+  }
+</style>

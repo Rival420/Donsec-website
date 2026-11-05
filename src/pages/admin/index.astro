@@ -1,0 +1,46 @@
+---
+export const prerender = false;
+import Admin from '../../layouts/Admin.astro';
+import { getServices, getWork } from '../../lib/content';
+const [sEn, sNl, wEn, wNl] = await Promise.all([getServices('en'), getServices('nl'), getWork('en'), getWork('nl')]);
+const nlService = (anchor: string) => sNl.find((s) => s.data.anchor === anchor);
+const nlWork = (id: string) => wNl.find((w) => w.id.split('/')[1] === id);
+const flash = Astro.url.searchParams.get('ok');
+---
+<Admin title="Overview" who={Astro.locals.adminEmail}>
+  <div class="admin-head"><h1>Content</h1><p class="muted">Changes are live immediately. No rebuild, no deploy.</p></div>
+  {flash && <p class="flash flash--ok">Saved.</p>}
+
+  <h2>Services</h2>
+  <table class="admin-table">
+    <thead><tr><th>#</th><th>Pillar</th><th>Prices (EN)</th><th>NL</th><th></th></tr></thead>
+    <tbody>
+      {sEn.map((s) => (
+        <tr>
+          <td>{s.data.order}</td>
+          <td><strong>{s.data.title}</strong>{s.data.secondary && <span class="badge badge--muted">secondary</span>}<br /><small class="muted">{s.data.headline}</small></td>
+          <td>{s.data.prices.map((p) => <div>{p.from ? `from €${p.from}` : p.text ?? '—'} <small class="muted">· {p.label}</small></div>)}</td>
+          <td>{nlService(s.data.anchor) ? nlService(s.data.anchor)!.data.title : <span class="badge badge--muted">missing</span>}</td>
+          <td class="actions"><a href={`/admin/services/${s.data.anchor}?lang=en`}>Edit EN</a><a href={`/admin/services/${s.data.anchor}?lang=nl`}>Edit NL</a></td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <div class="admin-head admin-head--sub"><h2>Work</h2><a class="btn btn--primary btn--sm" href="/admin/work/new">Add project</a></div>
+  <table class="admin-table">
+    <thead><tr><th>#</th><th>Project</th><th>Link</th><th>Flags</th><th>NL</th><th></th></tr></thead>
+    <tbody>
+      {wEn.map((w) => { const slug = w.id.split('/')[1]; return (
+        <tr>
+          <td>{w.data.order}</td>
+          <td><strong>{w.data.name}</strong><br /><small class="muted">{w.data.summary}</small></td>
+          <td>{w.data.url ? <a href={w.data.url} rel="noopener">{new URL(w.data.url).host}</a> : <span class="muted">—</span>}</td>
+          <td>{w.data.featured && <span class="badge">home</span>}{w.data.nda && <span class="badge badge--muted">NDA</span>}</td>
+          <td>{nlWork(slug) ? nlWork(slug)!.data.name : <span class="badge badge--muted">missing</span>}</td>
+          <td class="actions"><a href={`/admin/work/${slug}?lang=en`}>Edit EN</a><a href={`/admin/work/${slug}?lang=nl`}>Edit NL</a></td>
+        </tr>
+      ); })}
+    </tbody>
+  </table>
+</Admin>

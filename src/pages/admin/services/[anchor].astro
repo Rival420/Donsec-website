@@ -1,0 +1,76 @@
+---
+export const prerender = false;
+import { env } from 'cloudflare:workers';
+import Admin from '../../../layouts/Admin.astro';
+import { getService, ICONS, PILLARS } from '../../../lib/content';
+import { str, int, intOrNull, bool, lang as toLang, parsePrices, formatPrices, audit, redirect } from '../../../lib/admin/forms';
+
+const anchor = Astro.params.anchor!;
+const lang = toLang(Astro.url.searchParams.get('lang'));
+let error: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const title = str(f, 'title', 160);
+  if (!title) error = 'Title is required.';
+  else {
+    await env.DB.prepare(
+      `INSERT INTO services (anchor, lang, sort, icon, title, headline, summary, cta, cta_topic, secondary, card_price, prices, body, updated_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, datetime('now'))
+       ON CONFLICT(anchor, lang) DO UPDATE SET sort=?3, icon=?4, title=?5, headline=?6, summary=?7, cta=?8, cta_topic=?9, secondary=?10, card_price=?11, prices=?12, body=?13, updated_at=datetime('now')`,
+    ).bind(
+      anchor, lang, int(f, 'sort'), ICONS.includes(str(f, 'icon') as never) ? str(f, 'icon') : 'apps', title, str(f, 'headline', 200), str(f, 'summary', 400),
+      str(f, 'cta', 80), str(f, 'cta_topic', 40) || null, bool(f, 'secondary') ? 1 : 0, intOrNull(f, 'card_price'), JSON.stringify(parsePrices(str(f, 'prices', 4000))), str(f, 'body', 20000),
+    ).run();
+    await audit(Astro.locals.adminEmail ?? '?', 'service.save', `${lang}/${anchor}`);
+    return redirect(`/admin/services/${anchor}?lang=${lang}&ok=1`);
+  }
+}
+
+const s = await getService(lang, anchor);
+const other = await getService(lang === 'en' ? 'nl' : 'en', anchor);
+const d = s?.data;
+const ok = Astro.url.searchParams.get('ok');
+---
+<Admin title={`Service: ${anchor}`} who={Astro.locals.adminEmail}>
+  <p><a href="/admin">← Overview</a></p>
+  <div class="admin-head">
+    <h1>{d?.title ?? other?.data.title ?? anchor}</h1>
+    <div class="lang-tabs"><a href={`?lang=en`} aria-current={lang === 'en' ? 'page' : undefined}>EN</a><a href={`?lang=nl`} aria-current={lang === 'nl' ? 'page' : undefined}>NL</a></div>
+  </div>
+  {ok && <p class="flash flash--ok">Saved. <a href={`/${lang === 'nl' ? 'nl/' : ''}services#${anchor}`} rel="noopener">View on site ↗</a></p>}
+  {error && <p class="flash flash--err">{error}</p>}
+  {!s && <p class="flash flash--err">No {lang.toUpperCase()} version yet — saving this form creates it.</p>}
+
+  <form method="post" class="admin-form">
+    <div class="row">
+      <div class="field"><label for="title">Title</label><input id="title" name="title" required maxlength="160" value={d?.title ?? ''} /></div>
+      <div class="field"><label for="headline">Headline</label><input id="headline" name="headline" maxlength="200" value={d?.headline ?? ''} /></div>
+    </div>
+    <div class="field"><label for="summary">Summary <small>(home card, two lines)</small></label><textarea id="summary" name="summary" maxlength="400">{d?.summary ?? ''}</textarea></div>
+    <div class="row">
+      <div class="field"><label for="cta">CTA label</label><input id="cta" name="cta" maxlength="80" value={d?.cta ?? ''} /></div>
+      <div class="field"><label for="cta_topic">CTA topic <small>(preselects the contact form)</small></label>
+        <select id="cta_topic" name="cta_topic"><option value="">— none —</option>{PILLARS.map((p) => <option value={p} selected={(d?.ctaTopic ?? anchor) === p}>{p}</option>)}</select></div>
+      <div class="field"><label for="icon">Icon</label><select id="icon" name="icon">{ICONS.map((i) => <option value={i} selected={(d?.icon ?? anchor) === i}>{i}</option>)}</select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="sort">Order</label><input id="sort" name="sort" type="number" min="0" max="99" value={d?.order ?? 0} /></div>
+      <div class="field"><label for="card_price">Home card “from €” <small>(empty = “day rate on request”)</small></label><input id="card_price" name="card_price" type="number" min="0" step="50" value={d?.cardPrice ?? ''} /></div>
+      <div class="field"><span class="field__spacer">&nbsp;</span><label class="check"><input type="checkbox" name="secondary" checked={d?.secondary} /> Secondary (no home card)</label></div>
+    </div>
+    <div class="field">
+      <label for="prices">Prices <small>(one per line: <code>Label | 750</code> or <code>Label | day rate on request</code>)</small></label>
+      <textarea id="prices" name="prices" class="mono mono--short">{d ? formatPrices(d.prices) : ''}</textarea>
+    </div>
+    <div class="field">
+      <label for="body">Body <small>(Markdown: <code>### Heading</code>, <code>- bullet</code>, <code>**bold**</code>)</small></label>
+      <textarea id="body" name="body" class="mono">{s?.body ?? ''}</textarea>
+    </div>
+    <div class="admin-form__actions">
+      <button class="btn btn--primary" type="submit">Save {lang.toUpperCase()}</button>
+      <a class="btn btn--secondary btn--sm" href="/admin">Cancel</a>
+      {d && <span class="muted">Last saved {d.updatedAt} UTC</span>}
+    </div>
+  </form>
+</Admin>

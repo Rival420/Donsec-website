@@ -1,0 +1,50 @@
+---
+export const prerender = false;
+import { env } from 'cloudflare:workers';
+import Admin from '../../layouts/Admin.astro';
+import { getSettings, SETTING_KEYS } from '../../lib/content';
+import { ui } from '../../i18n/ui';
+import { str, audit, redirect } from '../../lib/admin/forms';
+
+const labels: Record<(typeof SETTING_KEYS)[number], string> = {
+  'availability.body': 'Availability statement (home, services, contact)',
+  'hero.sub': 'Home hero subtitle',
+  'contact.intro': 'Contact page intro',
+};
+
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const stmts = [];
+  for (const lang of ['en', 'nl'] as const) {
+    for (const key of SETTING_KEYS) {
+      const v = str(f, `${key}:${lang}`, 2000);
+      stmts.push(
+        v
+          ? env.DB.prepare(`INSERT INTO settings (key, lang, value, updated_at) VALUES (?, ?, ?, datetime('now')) ON CONFLICT(key, lang) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`).bind(key, lang, v)
+          : env.DB.prepare('DELETE FROM settings WHERE key = ? AND lang = ?').bind(key, lang),
+      );
+    }
+  }
+  await env.DB.batch(stmts);
+  await audit(Astro.locals.adminEmail ?? '?', 'settings.save', 'all');
+  return redirect('/admin/settings?ok=1');
+}
+const [en, nl] = await Promise.all([getSettings('en'), getSettings('nl')]);
+const ok = Astro.url.searchParams.get('ok');
+---
+<Admin title="Site texts" who={Astro.locals.adminEmail}>
+  <p><a href="/admin">← Overview</a></p>
+  <h1>Site texts</h1>
+  <p class="muted">Empty field = the built-in default text is used. Other strings (nav, principles, footer…) live in <code>src/i18n/ui.ts</code>.</p>
+  {ok && <p class="flash flash--ok">Saved.</p>}
+  <form method="post" class="admin-form">
+    {SETTING_KEYS.map((key) => (
+      <fieldset>
+        <legend>{labels[key]}</legend>
+        <div class="field"><label for={`${key}:en`}>EN</label><textarea id={`${key}:en`} name={`${key}:en`} placeholder={ui.en[key]}>{en[key] ?? ''}</textarea></div>
+        <div class="field"><label for={`${key}:nl`}>NL</label><textarea id={`${key}:nl`} name={`${key}:nl`} placeholder={ui.nl[key]}>{nl[key] ?? ''}</textarea></div>
+      </fieldset>
+    ))}
+    <div class="admin-form__actions"><button class="btn btn--primary" type="submit">Save texts</button></div>
+  </form>
+</Admin>
