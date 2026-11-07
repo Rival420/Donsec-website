@@ -1,16 +1,21 @@
 ---
 import type { WorkItem } from '../lib/content';
+import type { Media } from '../lib/media';
 import Icon from './Icon.astro';
 import { useTranslations, type Lang } from '../i18n/utils';
-interface Props { item: WorkItem; lang: Lang; compact?: boolean }
-const { item, lang, compact = false } = Astro.props;
+interface Props { item: WorkItem; lang: Lang; compact?: boolean; logo?: Media | null }
+const { item, lang, compact = false, logo = null } = Astro.props;
 const t = useTranslations(lang);
 const d = item.data;
 const host = d.url ? new URL(d.url).host : null;
 ---
 <article class="card work">
   <div class="work__head">
-    <span class="icon-tile"><Icon name={d.pillar} /></span>
+    {logo ? (
+      <span class="work__logo"><img src={logo.url} alt={logo.alt} width={logo.width ?? undefined} height={logo.height ?? undefined} loading="lazy" decoding="async" /></span>
+    ) : (
+      <span class="icon-tile"><Icon name={d.pillar} /></span>
+    )}
     {d.nda && <span class="work__nda">{t('work.nda')}</span>}
   </div>
   <h3>{d.name}</h3>
@@ -29,6 +34,8 @@ const host = d.url ? new URL(d.url).host : null;
 <style>
   .work { display: flex; flex-direction: column; gap: 0.8rem; }
   .work__head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .work__logo { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
+  .work__logo img { display: block; width: 100%; height: 100%; object-fit: contain; }
   .work__nda { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
   .work h3 { margin: 0.2rem 0 0; font-size: 1.15rem; }
   .work__summary { color: var(--text-2); margin: 0; font-size: 0.97rem; }

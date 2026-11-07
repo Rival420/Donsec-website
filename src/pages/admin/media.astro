@@ -1,0 +1,88 @@
+---
+export const prerender = false;
+import Admin from '../../layouts/Admin.astro';
+import { getMedia, storeUpload, updateAlt, removeMedia, UploadError, MAX_UPLOAD_BYTES } from '../../lib/media';
+import { str, audit, redirect } from '../../lib/admin/forms';
+
+const SLOT = 'about.photo';
+const who = Astro.locals.adminEmail ?? '?';
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const action = str(f, 'action', 20);
+  try {
+    if (action === 'remove') {
+      await removeMedia(SLOT);
+      await audit(who, 'media.remove', SLOT);
+      return redirect('/admin/media?removed=1');
+    }
+    const alt = str(f, 'alt', 200);
+    const file = f.get('photo');
+    if (file instanceof File && file.size > 0) {
+      await storeUpload(SLOT, file, alt);
+      await audit(who, 'media.upload', SLOT);
+      return redirect('/admin/media?ok=1');
+    }
+    await updateAlt(SLOT, alt);
+    await audit(who, 'media.alt', SLOT);
+    return redirect('/admin/media?ok=1');
+  } catch (e) {
+    error = e instanceof UploadError ? e.message : 'Upload failed. Try a different file or a smaller one.';
+    console.error('media upload', e);
+  }
+}
+const media = await getMedia(SLOT);
+const ok = Astro.url.searchParams.get('ok');
+const removed = Astro.url.searchParams.get('removed');
+const kb = media ? Math.round(media.bytes / 1024) : 0;
+---
+<Admin title="Photo" who={Astro.locals.adminEmail}>
+  <p><a href="/admin">← Overview</a></p>
+  <h1>About photo</h1>
+  <p class="muted">Shown on the About page next to your name. Any JPEG, PNG, WebP, AVIF or HEIC up to {Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB. It is converted to WebP, resized to at most 1200 px wide and stripped of metadata before it is stored. A portrait crop (4:5) or a square looks best.</p>
+  {ok && <p class="flash flash--ok">Saved.</p>}
+  {removed && <p class="flash flash--ok">Photo removed. The About page shows the brand symbol again.</p>}
+  {error && <p class="flash flash--err">{error}</p>}
+
+  <form method="post" enctype="multipart/form-data" class="admin-form">
+    <div class="media-current">
+      {media ? (
+        <figure>
+          <img src={media.url} alt={media.alt} width={media.width ?? undefined} height={media.height ?? undefined} class="media-current__img" />
+          <figcaption class="hint">{media.width}×{media.height} · {kb} KB · updated {media.updatedAt} UTC</figcaption>
+        </figure>
+      ) : (
+        <p class="hint">No photo uploaded yet. The About page shows the brand symbol.</p>
+      )}
+    </div>
+    <div class="field">
+      <label for="photo">{media ? 'Replace photo' : 'Photo'}</label>
+      <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.avif,.heic" />
+    </div>
+    <div class="field">
+      <label for="alt">Alt text</label>
+      <input id="alt" name="alt" type="text" maxlength="200" value={media?.alt ?? 'Pieter Donche'} placeholder="Pieter Donche" />
+      <p class="hint">Read by screen readers and search engines. A name is enough.</p>
+    </div>
+    <div class="admin-form__actions">
+      <button class="btn btn--primary" type="submit" name="action" value="save">Save</button>
+    </div>
+  </form>
+
+  {media && (
+    <div class="danger">
+      <h2>Remove photo</h2>
+      <p class="hint">Deletes the file and puts the brand symbol back on the About page.</p>
+      <form method="post" class="admin-form__actions">
+        <button class="btn btn--danger" type="submit" name="action" value="remove">Remove photo</button>
+      </form>
+    </div>
+  )}
+</Admin>
+
+<style is:global>
+  .media-current figure { margin: 0; display: grid; gap: 8px; }
+  .media-current__img { display: block; width: min(100%, 240px); height: auto; border-radius: 16px; border: 1px solid var(--border); }
+  .admin-form .field input[type='file'] { padding: 10px; }
+</style>

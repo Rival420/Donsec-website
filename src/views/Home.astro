@@ -1,5 +1,6 @@
 ---
 import { getServices, getWork, getSettings } from '../lib/content';
+import { getWorkLogos } from '../lib/media';
 import Base from '../layouts/Base.astro';
 import PillarCard from '../components/PillarCard.astro';
 import Principles from '../components/Principles.astro';
@@ -10,7 +11,7 @@ import { useTranslations, localePath, type Lang } from '../i18n/utils';
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const t = useTranslations(lang);
-const [pillars, proof, settings] = await Promise.all([getServices(lang, { includeSecondary: false }), getWork(lang, { featured: true }), getSettings(lang)]);
+const [pillars, proof, settings, logos] = await Promise.all([getServices(lang, { includeSecondary: false }), getWork(lang, { featured: true }), getSettings(lang), getWorkLogos()]);
 const heroSub = settings['hero.sub'] || t('hero.sub');
 const steps = [1, 2, 3] as const;
 const why = ['home.why.1', 'home.why.2', 'home.why.3', 'home.why.4'] as const;
@@ -81,7 +82,7 @@ const why = ['home.why.1', 'home.why.2', 'home.why.3', 'home.why.4'] as const;
         <a class="btn btn--secondary" href={localePath(lang, '/work')}>{t('home.proof.more')} <Icon name="arrow" /></a>
       </div>
       <div class="grid grid--3">
-        {proof.map((w) => <WorkCard item={w} lang={lang} compact />)}
+        {proof.map((w) => <WorkCard item={w} lang={lang} compact logo={logos[w.id.split('/')[1]]} />)}
       </div>
     </div>
   </section>

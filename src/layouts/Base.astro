@@ -5,6 +5,8 @@ import Footer from '../components/Footer.astro';
 import { useTranslations, localePath, stripLocale, type Lang } from '../i18n/utils';
 
 interface Props {
+  /** Absolute or site-relative URL of the owner's photo (About page), added to the Person JSON-LD. */
+  personImage?: string;
   lang: Lang;
   title: string;
   description: string;
@@ -13,7 +15,7 @@ interface Props {
   ogImage?: string;
   jsonLd?: Record<string, unknown>[];
 }
-const { lang, title, description, path, ogImage = '/og-image.png', jsonLd = [] } = Astro.props;
+const { lang, title, description, path, ogImage = '/og-image.png', jsonLd = [], personImage } = Astro.props;
 const t = useTranslations(lang);
 const site = Astro.site ?? new URL('https://donsec.be');
 const canonical = new URL(localePath(lang, path), site).href;
@@ -50,6 +52,7 @@ const person = {
   email: 'pieter@donche.org',
   address: { '@type': 'PostalAddress', addressLocality: 'Eppegem', addressCountry: 'BE' },
   url: new URL(localePath(lang, '/about'), site).href,
+  ...(personImage ? { image: new URL(personImage, site).href } : {}),
 };
 const ld = JSON.stringify([org, person, ...jsonLd]);
 ---

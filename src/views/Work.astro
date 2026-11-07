@@ -1,5 +1,6 @@
 ---
 import { getWork } from '../lib/content';
+import { getWorkLogos } from '../lib/media';
 import Base from '../layouts/Base.astro';
 import WorkCard from '../components/WorkCard.astro';
 import Cta from '../components/Cta.astro';
@@ -7,7 +8,7 @@ import { useTranslations, type Lang } from '../i18n/utils';
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const t = useTranslations(lang);
-const items = await getWork(lang);
+const [items, logos] = await Promise.all([getWork(lang), getWorkLogos()]);
 ---
 <Base lang={lang} title={t('work.title')} description={t('work.meta.description')} path="/work">
   <section class="page-hero">
@@ -19,7 +20,7 @@ const items = await getWork(lang);
   </section>
   <section class="section section--tight">
     <div class="container grid grid--3">
-      {items.map((w) => <WorkCard item={w} lang={lang} />)}
+      {items.map((w) => <WorkCard item={w} lang={lang} logo={logos[w.id.split('/')[1]]} />)}
     </div>
   </section>
   <Cta lang={lang} />

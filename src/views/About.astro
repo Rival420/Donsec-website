@@ -3,15 +3,17 @@ import Base from '../layouts/Base.astro';
 import Principles from '../components/Principles.astro';
 import Cta from '../components/Cta.astro';
 import { useTranslations, type Lang } from '../i18n/utils';
+import { getMedia } from '../lib/media';
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const t = useTranslations(lang);
+const photo = await getMedia('about.photo');
 const stack = [
   'Cloudflare (Workers, Zero Trust, Access, Gateway)', 'Okta / Entra ID', 'SentinelOne-class EDR', 'SIEM',
   'Docker', 'Postgres', 'Go', 'Python', 'TypeScript', 'React', 'Claude / LLM tooling', 'MCP',
 ];
 ---
-<Base lang={lang} title={t('about.title')} description={t('about.meta.description')} path="/about">
+<Base lang={lang} title={t('about.title')} description={t('about.meta.description')} path="/about" personImage={photo?.url}>
   <section class="page-hero">
     <div class="container about-hero">
       <div class="about-hero__text">
@@ -21,9 +23,15 @@ const stack = [
         <p class="lead">{t('about.bio.1')}</p>
         <p class="muted">{t('about.bio.2')}</p>
       </div>
-      <div class="about-hero__mark" aria-hidden="true">
-        <img src="/brand/symbol-color.svg" alt="" width="320" height="320" />
-      </div>
+      {photo ? (
+        <div class="about-hero__photo">
+          <img src={photo.url} alt={photo.alt || t('about.name')} width={photo.width ?? undefined} height={photo.height ?? undefined} loading="eager" decoding="async" />
+        </div>
+      ) : (
+        <div class="about-hero__mark" aria-hidden="true">
+          <img src="/brand/symbol-color.svg" alt="" width="320" height="320" />
+        </div>
+      )}
     </div>
   </section>
 
@@ -72,6 +80,9 @@ const stack = [
   .about-hero { display: grid; grid-template-columns: 1fr; gap: 32px; align-items: center; }
   @media (min-width: 860px) { .about-hero { grid-template-columns: 1.6fr 1fr; } }
   .about-hero__role { font-weight: 600; color: var(--blue-deep); margin-top: -0.4rem; margin-bottom: 1rem; }
+  .about-hero__photo { order: -1; justify-self: start; }
+  .about-hero__photo img { display: block; width: min(100%, 200px); aspect-ratio: 4 / 5; height: auto; object-fit: cover; border-radius: 24px; box-shadow: 0 12px 32px rgb(8 31 59 / 0.18); }
+  @media (min-width: 860px) { .about-hero__photo { order: 0; justify-self: center; } .about-hero__photo img { width: min(100%, 320px); } }
   .about-hero__mark { display: none; }
   @media (min-width: 860px) { .about-hero__mark { display: grid; place-items: center; } .about-hero__mark img { width: min(100%, 280px); height: auto; opacity: 0.95; } }
   .about-two { display: grid; grid-template-columns: 1fr; gap: 40px; }

@@ -4,6 +4,7 @@ import { env } from 'cloudflare:workers';
 import Admin from '../../../layouts/Admin.astro';
 import { getWorkItem, PILLARS } from '../../../lib/content';
 import { str, int, bool, lang as toLang, parseTags, slugOk, audit, redirect } from '../../../lib/admin/forms';
+import { getMedia, storeUpload, removeMedia, UploadError, workSlot } from '../../../lib/media';
 
 const isNew = Astro.params.slug === 'new';
 const lang = toLang(Astro.url.searchParams.get('lang'));
@@ -17,11 +18,30 @@ if (Astro.request.method === 'POST') {
     if (!bool(f, 'confirm')) error = 'Tick the confirmation box to delete.';
     else {
       const scope = str(f, 'scope', 10) === 'all' ? 'all' : lang;
-      if (scope === 'all') await env.DB.prepare('DELETE FROM work WHERE slug = ?').bind(slug).run();
-      else await env.DB.prepare('DELETE FROM work WHERE slug = ? AND lang = ?').bind(slug, lang).run();
+      if (scope === 'all') {
+        await env.DB.prepare('DELETE FROM work WHERE slug = ?').bind(slug).run();
+        await removeMedia(workSlot(slug));
+      } else await env.DB.prepare('DELETE FROM work WHERE slug = ? AND lang = ?').bind(slug, lang).run();
       await audit(Astro.locals.adminEmail ?? '?', `work.delete.${scope}`, `${lang}/${slug}`);
       return redirect('/admin?ok=1');
     }
+  } else if (action === 'logo') {
+    try {
+      const file = f.get('logo');
+      if (!(file instanceof File) || file.size === 0) error = 'Choose a file first.';
+      else {
+        await storeUpload(workSlot(slug), file, str(f, 'logo_alt', 160) || `${slug} logo`);
+        await audit(Astro.locals.adminEmail ?? '?', 'work.logo', slug);
+        return redirect(`/admin/work/${slug}?lang=${lang}&ok=1`);
+      }
+    } catch (e) {
+      error = e instanceof UploadError ? e.message : 'Upload failed. Try a different file.';
+      console.error('work logo upload', e);
+    }
+  } else if (action === 'logo-remove') {
+    await removeMedia(workSlot(slug));
+    await audit(Astro.locals.adminEmail ?? '?', 'work.logo.remove', slug);
+    return redirect(`/admin/work/${slug}?lang=${lang}&ok=1`);
   } else {
     const name = str(f, 'name', 160);
     let url: string | null = str(f, 'url', 300) || null;
@@ -46,6 +66,7 @@ const slug = isNew ? '' : Astro.params.slug!;
 const w = isNew ? null : await getWorkItem(lang, slug);
 const other = isNew ? null : await getWorkItem(lang === 'en' ? 'nl' : 'en', slug);
 const d = w?.data;
+const logo = isNew ? null : await getMedia(workSlot(slug));
 const ok = Astro.url.searchParams.get('ok');
 ---
 <Admin title={isNew ? 'New project' : `Work: ${slug}`} who={Astro.locals.adminEmail}>
@@ -83,6 +104,31 @@ const ok = Astro.url.searchParams.get('ok');
     </div>
   </form>
 
+  {!isNew && (w || other) && (
+    <section class="admin-form admin-form--logo">
+      <h2 class="admin-form__title">Logo</h2>
+      <p class="hint">Replaces the pillar icon on this project's card, in both languages. Square works best. SVG (plain graphic, no scripts), PNG with transparency, WebP or JPEG; raster files are converted to WebP at most 512 px and stripped of metadata.</p>
+      <div class="logo-row">
+        <span class="logo-preview">{logo ? <img src={logo.url} alt={logo.alt} width={logo.width ?? undefined} height={logo.height ?? undefined} /> : <span class="hint">none</span>}</span>
+        <form method="post" enctype="multipart/form-data" class="logo-form">
+          <input type="hidden" name="_action" value="logo" />
+          <div class="row">
+            <div class="field"><label for="logo">{logo ? 'Replace logo' : 'Logo file'}</label><input id="logo" name="logo" type="file" accept="image/svg+xml,image/png,image/webp,image/jpeg,image/avif,.svg,.png,.webp,.jpg,.jpeg,.avif" /></div>
+            <div class="field"><label for="logo_alt">Alt text</label><input id="logo_alt" name="logo_alt" maxlength="160" value={logo?.alt ?? `${d?.name ?? other?.data.name ?? slug} logo`} /></div>
+          </div>
+          <div class="admin-form__actions"><button class="btn btn--primary btn--sm" type="submit">Upload logo</button>
+            {logo && <span class="muted">{logo.contentType === 'image/svg+xml' ? 'SVG' : `${logo.width}×${logo.height} WebP`} · {Math.round(logo.bytes / 1024)} KB</span>}</div>
+        </form>
+        {logo && (
+          <form method="post" class="logo-remove">
+            <input type="hidden" name="_action" value="logo-remove" />
+            <button class="btn btn--secondary btn--sm" type="submit">Remove logo</button>
+          </form>
+        )}
+      </div>
+    </section>
+  )}
+
   {!isNew && w && (
     <form method="post" class="danger">
       <h2>Delete</h2>
@@ -95,3 +141,14 @@ const ok = Astro.url.searchParams.get('ok');
     </form>
   )}
 </Admin>
+
+<style is:global>
+  .admin-form--logo { margin-top: 28px; }
+  .admin-form__title { margin: 0; font-size: 1.25rem; }
+  .logo-row { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start; }
+  .logo-preview { display: grid; place-items: center; width: 96px; height: 96px; border-radius: 16px; background: var(--bg); border: 1px solid var(--border); overflow: hidden; }
+  .logo-preview img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .logo-form { display: grid; gap: 14px; }
+  .logo-remove { grid-column: 2; }
+  .admin-form .field input[type='file'] { padding: 10px; }
+</style>

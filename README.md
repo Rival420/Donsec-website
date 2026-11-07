@@ -25,7 +25,7 @@ This site is its own best sales pitch. DonIT sells serverless, privacy-first web
 ## Highlights
 
 - **Serverless, global, free to run** — Cloudflare Workers + Static Assets. Pages that never change are prerendered; pages with editable content render on demand from D1 in a few milliseconds.
-- **Own admin, live edits** — `/admin` edits services, prices, portfolio items and key site texts in English and Dutch. Saves are live immediately. Every save is audit-logged.
+- **Own admin, live edits** — `/admin` edits services, prices, portfolio items, key site texts in English and Dutch, the owner's photo and a logo per project. Saves are live immediately. Every save is audit-logged.
 - **Zero cookies, zero trackers** — no analytics, no consent banner needed. Fonts are self-hosted. The only third-party host the CSP allows is Cloudflare Turnstile on the contact page.
 - **Security by construction** — strict CSP without inline scripts or styles, HSTS preload, frame denial, minimal Permissions-Policy, COOP/CORP. Same header set on static and Worker responses.
 - **Contact form that keeps nothing** — honeypot → native rate limit → Turnstile → validation → Cloudflare Email Service. The message is emailed and never stored.
@@ -38,8 +38,10 @@ This site is its own best sales pitch. DonIT sells serverless, privacy-first web
 flowchart LR
   V[Visitor] -->|HTTPS| CF[Cloudflare edge]
   CF -->|static pages, CSS, fonts| A[Static Assets]
-  CF -->|/, /services, /work, /contact, /admin, /api| W[Worker · Astro SSR]
-  W --> D1[(D1 · services, work, settings, audit_log)]
+  CF -->|/, /services, /work, /about, /contact, /media, /admin, /api| W[Worker · Astro SSR]
+  W --> D1[(D1 · services, work, settings, media, audit_log)]
+  W -->|photo bytes| R2[(R2 · media)]
+  W -->|once per upload| IMG[Images · WebP]
   W -->|siteverify| TS[Turnstile]
   W -->|send_email binding| ES[Email Service]
   W -->|limit| RL[Rate limit binding]
@@ -51,7 +53,8 @@ flowchart LR
 |---|---|
 | Framework | [Astro 7](https://astro.build) with `@astrojs/cloudflare` — `output: 'static'`, dynamic routes opt in with `prerender = false` |
 | Hosting | Cloudflare Workers + Static Assets, custom domains `donsec.be` and `www` (www 301s to the apex) |
-| Content | Cloudflare D1 (`DB` binding): `services`, `work`, `settings`, `audit_log` |
+| Content | Cloudflare D1 (`DB` binding): `services`, `work`, `settings`, `media`, `audit_log` |
+| Media | R2 (`MEDIA` binding) for the owner's photo and project logos; the Images binding converts each raster upload once to WebP (≤ 1200 px photo, ≤ 512 px logo) and strips metadata, SVG logos are stored after a static check. Served from `/media/*` with a content hash in the key, so immutable caching |
 | Admin | `/admin*` behind Cloudflare Access; the Worker verifies the Access JWT again with `jose` |
 | Contact | Cloudflare Turnstile → `/api/contact` → `send_email` binding (Email Service), per-IP `ratelimits` binding |
 | i18n | Path-based (`/` = en, `/nl` = nl), strings in `src/i18n/ui.ts`, fixed Dutch headline strings from the brand brief |
@@ -84,8 +87,9 @@ docker compose up dev                    # Astro dev server on http://localhost:
 | What | Where |
 |---|---|
 | Service pillars — title, headline, summary, prices, CTA, body (Markdown), order | `/admin/services/<anchor>?lang=en\|nl` |
-| Portfolio — name, one-liner, link, tags, pillar, NDA and home flags, order; add or delete | `/admin/work/<slug>`, `/admin/work/new` |
+| Portfolio — name, one-liner, link, tags, pillar, NDA and home flags, order; add or delete; logo (SVG, PNG, WebP…) replacing the pillar icon | `/admin/work/<slug>`, `/admin/work/new` |
 | Availability statement, hero subtitle, contact intro (EN + NL) | `/admin/settings` — empty field = built-in default |
+| About photo and its alt text; remove to fall back to the brand symbol | `/admin/media` — JPEG, PNG, WebP, AVIF or HEIC up to 10 MB |
 | Privacy and terms | `src/content/legal/{en,nl}/*.md` (build time) |
 | Everything else: navigation, principles, footer, form labels… | `src/i18n/ui.ts` (build time) |
 
@@ -97,11 +101,12 @@ Prices are entered one per line as `Label | 750` (a number means "from €750") 
 
 ```
 src/
-  pages/              thin route files (EN at the root, NL under /nl), api/contact.ts, admin/*
+  pages/              thin route files (EN at the root, NL under /nl), api/contact.ts, media/[...key].ts, admin/*
   views/              one component per public page, takes `lang`
   components/         Header, Footer, PillarCard, WorkCard, ContactForm, PriceTable, Principles, …
   layouts/            Base.astro (head, SEO, hreflang, JSON-LD) and Admin.astro
   lib/content.ts      D1 queries + Markdown rendering
+  lib/media.ts        upload normalisation (Images binding) + R2 storage
   lib/access.ts       Cloudflare Access JWT verification
   lib/security-headers.ts   single source for the header set (mirrored into public/_headers)
   i18n/               ui.ts (all strings), utils.ts
@@ -117,6 +122,7 @@ public/               favicons, brand SVGs, fonts, _headers, robots.txt
 - **CSP**: `default-src 'self'`; scripts and frames additionally allow `challenges.cloudflare.com` for Turnstile; no `unsafe-inline` anywhere. Astro is configured with `inlineStylesheets: 'never'`, and every client script is an external module.
 - **Admin**: Access enforces the login at the edge, the Worker verifies the JWT (issuer, audience, signature) a second time, state-changing requests must be same-origin, responses are `no-store` and `noindex`. The workers.dev hostname is not behind Access and therefore returns 403 for `/admin`.
 - **Contact API**: only the honeypot, rate limit, Turnstile verdict and validation decide; nothing is written anywhere. Responses carry the full security header set.
+- **Uploads**: the Images binding decodes every raster upload itself, so a renamed non-image is rejected regardless of extension; only the re-encoded WebP is stored, never the original bytes or their metadata. SVG is accepted for logos only, capped at 512 KB, and refused if it contains scripts, event handlers, foreign objects or external references; it is rendered through `<img>` under the site CSP, which blocks script execution anyway. `/media/*` keys are validated against a strict pattern and read straight from R2.
 - **Transport**: HSTS with preload directive, Always Use HTTPS on the zone, TLS 1.3 enabled.
 
 Targets: A+ on [securityheaders.com](https://securityheaders.com/?q=donsec.be&followRedirects=on) and [Mozilla Observatory](https://developer.mozilla.org/en-US/observatory/analyze?host=donsec.be).
@@ -136,6 +142,8 @@ What the deployment relies on, all already configured:
 |---|---|
 | Worker `donsec-website` | custom domains `donsec.be`, `www.donsec.be`; preview URL on workers.dev |
 | D1 `donsec-website` | schema + seed applied |
+| R2 `donsec-website-media` | owner-uploaded photo and logos; written only by the admin |
+| Images binding | free tier (5,000 unique transformations/month); used once per upload, never per request |
 | Turnstile widget | site key in `.env` (`PUBLIC_TURNSTILE_SITE_KEY`), secret stored on the Worker as `TURNSTILE_SECRET_KEY` |
 | Email Service | `donsec.be` onboarded for sending (records on `cf-bounce.donsec.be` + `_dmarc.donsec.be`) |
 | Access app "donsec.be admin" | `donsec.be/admin*`; its AUD is in `wrangler.jsonc` |
@@ -152,7 +160,7 @@ Things the brand brief left to confirm, and how the build handles them today:
 | Pentest delivery framework naming | neutral wording: "delivered under a formal engagement framework with rules of engagement and insurance" |
 | Retainer, workshop, assessment and pentest prices | "day rate on request" (editable in the admin) |
 | Portfolio links and one-liners | editable in the admin; only `rysa.donsec.be` is linked so far |
-| Photo and certifications on About | brand symbol instead of a photo; certifications section omitted |
+| Photo and certifications on About | photo uploadable at `/admin/media` (brand symbol until then); certifications section omitted |
 | Dutch register | je/jij |
 | Analytics | none |
 | Booking tool | none, direct email only |

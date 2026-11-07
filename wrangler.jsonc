@@ -18,12 +18,18 @@
     "html_handling": "auto-trailing-slash",
     // Dynamic (D1-rendered) routes must reach the Worker even for browser navigations;
     // without this, navigation requests get the static 404 page before the Worker runs.
-    "run_worker_first": ["/", "/nl", "/services", "/nl/services", "/work", "/nl/work", "/contact", "/nl/contact", "/admin", "/admin/*", "/api/*"]
+    "run_worker_first": ["/", "/nl", "/services", "/nl/services", "/work", "/nl/work", "/about", "/nl/about", "/contact", "/nl/contact", "/admin", "/admin/*", "/api/*", "/media/*"]
   },
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "d1_databases": [
     { "binding": "DB", "database_name": "donsec-website", "database_id": "9b96f835-ff13-49d7-9b9f-5c49115684cf", "migrations_dir": "migrations" }
   ],
+  // Owner-uploaded media (About photo). Objects are written once by the admin, served immutable from /media/*.
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "donsec-website-media" }
+  ],
+  // Images binding: converts uploads to WebP once at upload time (strips metadata, resizes). Free tier: 5k unique/month.
+  "images": { "binding": "IMAGES" },
   "vars": {
     "ACCESS_TEAM_DOMAIN": "donsec.cloudflareaccess.com",
     "ACCESS_AUD": "09030b54eccaf52e533a1e1cd7a9a8b0415c4406fd0044e66e9cde86403ca0f5",
